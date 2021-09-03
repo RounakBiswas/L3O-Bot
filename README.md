@@ -5,3 +5,5 @@ It has moderation features
 It also has some fun commands.
 
 Try it out.
+
+Made by InVcTus#1729
