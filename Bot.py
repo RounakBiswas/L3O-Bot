@@ -1,18 +1,23 @@
+import json
 import discord
-import os
 import aiosqlite
+import praw
+import sqlite3
 import asyncio
 import math
+from discord import message
+from discord import user
 from discord.ext import commands
-from keep_alive import keep_alive
+from discord.ext.commands import cog
 import requests
 import re
 import random
 from PIL import Image
 from io import BytesIO
+import os
+from requests.models import Response
 
-
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 intents.members = True
 intents.presences = True
 client = commands.Bot(command_prefix = '^' , intents = intents)
@@ -36,6 +41,8 @@ async def on_message(message):
         await message.channel.send(f"{message.author.name} well done! You are now level: {int(lvl)}.")
 
     await client.db.commit()
+
+
   
   # await client.process_commands(message)
 
@@ -78,6 +85,7 @@ async def on_ready():
     client.db = await aiosqlite.connect("expData.db")
     await client.db.execute("CREATE TABLE IF NOT EXISTS guildData (guild_id int, user_id int , exp int, PRIMARY KEY (guild_id, user_id))")
 
+
     await client.change_presence(status = discord.Status.idle, activity = discord.Game('Helping Servers!'))
     print('Bot is ready')
 
@@ -91,7 +99,8 @@ async def on_command_error(ctx,error):
 
 #CLEAR COMMAND
 
-@client.command(help = "This command clears unwanted messages.")
+
+@client.command(help="This command clears unwanted messages.")
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx, amount : int):
   await ctx.channel.purge(limit = amount)
@@ -133,7 +142,7 @@ async def unban(ctx,*, member,):
 
   
 #FACT COMMAND
-@client.command(help = "This command returns a random fact")
+@client.command(help="This command returns a random fact", slash_commands=True)
 async def fact(ctx):
   
   fact = fact_stringer()
@@ -145,8 +154,9 @@ async def fact(ctx):
 
   await ctx.send(embed=embed)
 
-@client.command(help = "This command spams a message")
-@commands.cooldown(1,600,commands.BucketType.user)
+
+@client.command(help="This command spams a message", slash_commands=True)
+@commands.cooldown(1,60,commands.BucketType.user)
 async def spam(ctx , str, * , amount: int):
   if(amount < 20):
     for i in range(amount):
@@ -154,7 +164,8 @@ async def spam(ctx , str, * , amount: int):
   else:
     await ctx.send("Dont spam")
 
-@client.command(help="This command returns the info of the mentioned user")
+
+@client.command(help="This command returns the info of the mentioned user", slash_commands=True)
 async def info(ctx, member:discord.Member):
 
   embed = discord.Embed(title=f"{member.name}'s Info",description = "", color = 0x66f276)
@@ -169,19 +180,22 @@ async def info(ctx, member:discord.Member):
 
   await ctx.send(embed=embed)
 
-@client.command(help = "This command changes the nickname of the mentioned user")
+
+@client.command(help="This command changes the nickname of the mentioned user")
 @commands.has_permissions(manage_nicknames=True)
 async def nick(ctx, member:discord.Member, *, nickname: str):
   await member.edit(nick=nickname)
   await ctx.send(f"Name was changed to {member.mention}")
 
-@client.command(help = "mentions two users in front of this command")
+
+@client.command(help="mentions two users in front of this command", slash_commands=True)
 @commands.cooldown(1,60,commands.BucketType.user)
 async def fuck(ctx, member1:discord.Member, member2:discord.Member):
   satis = satisfaction_calculator()
   await ctx.send(f"{member1.mention} fucked {member2.mention} and {member2.mention} was {satis}% satisfied")
 
-@client.command(help = "This command returns a image of the user as a wanted poster")
+
+@client.command(help="This command returns a image of the user as a wanted poster", slash_commands=True)
 async def wanted(ctx, user:discord.Member = None):
   if user == None:
     user = ctx.author
@@ -201,7 +215,8 @@ async def wanted(ctx, user:discord.Member = None):
 
   await ctx.send(file = discord.File("profile.jpg"))
 
-@client.command(help = "Check your level using this")
+
+@client.command(help="Check your level using this", slash_commands=True)
 async def stats(ctx, member: discord.Member):
 
 
@@ -232,7 +247,8 @@ async def stats(ctx, member: discord.Member):
 
   await ctx.send(embed=embed)
 
-@client.command(help = "Shows the leaderboards for the current server of the xp")
+
+@client.command(help="Shows the leaderboards for the current server of the xp", slash_commands=True)
 async def leaderboard(ctx): 
     buttons = {}
     for i in range(1, 6):
@@ -277,10 +293,88 @@ async def leaderboard(ctx):
             current = buttons[reaction.emoji]
 
 
-@client.command()
-async def prefix(ctx , prefix: str):
-  await ctx.send("Hello")  
+@client.command(help="Gives a random insult.", slash_commands=True)
+async def insult(ctx , user: discord.Member):
+    
+    url = "https://evilinsult.com/generate_insult.php?lang=en&type=json"
 
-keep_alive()
-client.run(os.getenv('token'))
+    Data = requests.get(url)
+    json_data = Data.json()
+    insult = json_data["insult"]
+    
+    embed = discord.Embed(title=f"Insult for {user.name}" , description=f"{insult}" , colour=discord.Colour.blue())
+
+    await ctx.send(embed=embed)
+
+
+@client.command(help="Says a random quote everytime", slash_commands=True)
+async def quote(ctx):
+
+  url = "https://zenquotes.io/api/random"
+
+  response = requests.get(url)
+
+  jsonData = json.loads(response.text)
+
+  quote = jsonData[0]['q'] + "-" + jsonData[0]['a']
+
+  embed = discord.Embed(title="Quote" , description=f"{quote}", colour= discord.Colour.random())
+
+  await ctx.send(embed=embed)
+   
+reddit = praw.Reddit(client_id= #your client id ,
+                     client_secret= #your secret ,
+                     username = "test_account_for_bot",
+                     password = #your password,
+                     user_agent = "prawmoment")
+
+
+@client.command(help="Thoughts that make you go hmmmm....", slash_commands=True)
+async def showerthoughts(ctx):
+
+  subreddit = reddit.subreddit("Showerthoughts")
+  all_subs = []
+
+  top = subreddit.top(limit = 100)
+
+  for submissions in top:
+    all_subs.append(submissions)
+
+  random_sub = random.choice(all_subs)
+
+  name = random_sub.title
+  url  = random_sub.url
+
+  embed = discord.Embed(title=name)
+
+
+  await ctx.send(embed=embed)
+
+@client.command(help = "Wanna see some memes ?" , slash_commands=True)
+async def meme(ctx):
+
+  subreddit = reddit.subreddit("meme")
+  all_subs = []
+
+  top = subreddit.top(limit = 100)
+
+  for submissions in top:
+    all_subs.append(submissions)
+
+  random_sub = random.choice(all_subs)
+
+  name = random_sub.title
+  url  = random_sub.url
+
+  embed = discord.Embed(title=name)
+
+  embed.set_image(url = url)
+
+
+  await ctx.send(embed=embed)
+
+#ECONOMY COMMANDS
+
+
+client.run("ODc2Nzg2NjM4ODQ2NTYyMzM1.YRpJMA.h677lPtM-uIyQGS7gSyJwh0H7OQ")
 asyncio.run(client.db.close())
