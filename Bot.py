@@ -376,5 +376,5 @@ async def meme(ctx):
 #ECONOMY COMMANDS
 
 
-client.run("ODc2Nzg2NjM4ODQ2NTYyMzM1.YRpJMA.h677lPtM-uIyQGS7gSyJwh0H7OQ")
+client.run("your token here")
 asyncio.run(client.db.close())
